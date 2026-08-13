@@ -250,7 +250,7 @@ function genProblems(n, maxf) {
       var factors = [];
       a = a * zz;
       b = b * zz;
-      var temp = diff;
+      var temp = diff * zz;
 
       for (var f = 2; f * f <= temp; f++) {
         if (temp % f === 0) {
