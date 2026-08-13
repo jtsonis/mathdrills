@@ -246,13 +246,11 @@ function genProblems(n, maxf) {
       }
 
       var zz = Math.floor(Math.random() * (5 - 1)) + 2;
-      var zy = Math.floor(Math.random() * (5 - 1)) + 2;
-      var z = Math.min(zz, zy);
       
       var factors = [];
-      a = a * z;
-      b = b * z;
-      var temp = diff * z;
+      a = a * zz;
+      b = b * zz;
+      var temp = diff;
 
       for (var f = 2; f * f <= temp; f++) {
         if (temp % f === 0) {
