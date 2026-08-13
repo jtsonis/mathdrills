@@ -248,8 +248,8 @@ function genProblems(n, maxf) {
       var zz = Math.floor(Math.random() * (5 - 1)) + 2;
       
       var factors = [];
-      a = a * zz;
-      b = b * zz;
+      maxVal *= zz;
+      minVal *= zz;
       var temp = diff * zz;
 
       for (var f = 2; f * f <= temp; f++) {
