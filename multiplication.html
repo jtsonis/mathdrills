@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Multiplication Speed Drill</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 100%;
+    width: 600px;
+    margin: 20px auto;
+    padding: 0 16px;
+    box-sizing: border-box;
+    color: #222;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+  label { font-size: 14px; color: #555; }
+  input[type="range"] { width: 100%; }
+  input[type="number"] {
+    width: 140px;
+    text-align: center;
+    font-size: 20px;
+    height: 44px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #f7f7f7;
+    cursor: pointer;
+  }
+  button:hover { background: #eee; }
+  #submit {
+    margin-top: 16px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+  }
+  #submit:hover { background: #1d4ed8; }
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .row label { min-width: 110px; }
+  .center { text-align: center; }
+  #problem { font-size: 40px; font-weight: 600; margin-bottom: 24px; }
+  #progress, #timer { font-size: 13px; color: #666; }
+  .topbar { display: flex; justify-content: space-between; margin-bottom: 24px; }
+  .error { font-size: 13px; color: #c0392b; min-height: 18px; margin-top: 8px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: #f5f5f5; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat-card p:first-child { font-size: 13px; color: #666; margin: 0 0 4px; }
+  .stat-card p:last-child { font-size: 22px; font-weight: 600; margin: 0; }
+  .mistakes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .mistake-pill {
+    background: #fdecea;
+    color: #c0392b;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Multiplication Speed Drill</h1>
+
+<div id="setup">
+  <div class="row">
+    <label>Problems</label>
+    <input type="range" min="10" max="100" step="10" value="20" id="count" />
+    <span id="count-out">20</span>
+  </div>
+  <div class="row">
+    <label>Max factor</label>
+    <input type="range" min="5" max="12" step="1" value="10" id="maxf" />
+    <span id="maxf-out">10</span>
+  </div>
+  <button id="start-btn">Start drill</button>
+</div>
+
+<div id="quiz" style="display:none;">
+  <div class="topbar">
+    <span id="progress">1 / 20</span>
+    <span id="timer">0.00s</span>
+  </div>
+  <div class="center">
+    <div id="problem">4 × 6</div>
+  </div>
+  <div class="center">
+    <input type="number" id="answer" inputmode="numeric" autocomplete="off" />
+  </div>
+  <p id="input-error" class="error"></p>
+  <button id="submit">Submit</button>
+</div>
+
+<div id="results" style="display:none;">
+  <div class="stats">
+    <div class="stat-card"><p>Time</p><p id="res-time">0.00s</p></div>
+    <div class="stat-card"><p>Correct</p><p id="res-correct">0/0</p></div>
+    <div class="stat-card"><p>Avg / problem</p><p id="res-avg">0.00s</p></div>
+  </div>
+  <div id="mistakes-wrap" style="display:none;">
+    <p style="font-size:13px; color:#666; margin:0 0 8px;">Missed</p>
+    <div id="mistakes" class="mistakes"></div>
+  </div>
+  <button id="retry-btn">Try again</button>
+</div>
+
+<script>
+var countSlider = document.getElementById('count');
+var maxfSlider = document.getElementById('maxf');
+var countOut = document.getElementById('count-out');
+var maxfOut = document.getElementById('maxf-out');
+countSlider.addEventListener('input', function() { countOut.textContent = countSlider.value; });
+maxfSlider.addEventListener('input', function() { maxfOut.textContent = maxfSlider.value; });
+
+var setupEl = document.getElementById('setup');
+var quizEl = document.getElementById('quiz');
+var resultsEl = document.getElementById('results');
+var problemEl = document.getElementById('problem');
+var answerEl = document.getElementById('answer');
+var progressEl = document.getElementById('progress');
+var timerEl = document.getElementById('timer');
+var errorEl = document.getElementById('input-error');
+
+var problems = [];
+var idx = 0;
+var correctCount = 0;
+var mistakes = [];
+var startTime = 0;
+var timerInterval = null;
+
+function genProblems(n, maxf) {
+  var list = [];
+  for (var i = 0; i < n; i++) {
+    var a = Math.floor(Math.random() * (maxf - 1)) + 2;
+    var b = Math.floor(Math.random() * (maxf - 1)) + 2;
+    list.push({ a: a, b: b, answer: a * b });
+  }
+  return list;
+}
+
+function showProblem() {
+  var p = problems[idx];
+  problemEl.textContent = p.a + ' × ' + p.b;
+  progressEl.textContent = (idx + 1) + ' / ' + problems.length;
+  answerEl.value = '';
+  errorEl.textContent = '';
+  answerEl.focus();
+}
+
+function formatTime(seconds) {
+  var parts = seconds.toFixed(2).split('.');
+  return parts[0] + '.' + (parts[1] + '0').slice(0, 2);
+}
+
+function updateTimer() {
+  var elapsed = (Date.now() - startTime) / 1000;
+  timerEl.textContent = formatTime(elapsed) + 's';
+}
+
+document.getElementById('start-btn').addEventListener('click', function() {
+  var n = parseInt(countSlider.value, 10);
+  var maxf = parseInt(maxfSlider.value, 10);
+  problems = genProblems(n, maxf);
+  idx = 0;
+  correctCount = 0;
+  mistakes = [];
+  setupEl.style.display = 'none';
+  resultsEl.style.display = 'none';
+  quizEl.style.display = 'block';
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 50);
+  showProblem();
+});
+
+function submitAnswer() {
+  var raw = answerEl.value.trim();
+  if (raw === '') {
+    errorEl.textContent = 'Enter an answer first';
+    return;
+  }
+  var val = parseInt(raw, 10);
+  if (isNaN(val)) {
+    errorEl.textContent = 'Enter a number';
+    return;
+  }
+  var p = problems[idx];
+  if (val === p.answer) {
+    correctCount++;
+  } else {
+    mistakes.push(p.a + '×' + p.b + '=' + p.answer);
+  }
+  idx++;
+  if (idx >= problems.length) {
+    finish();
+  } else {
+    showProblem();
+  }
+}
+
+answerEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitAnswer();
+  }
+});
+
+answerEl.addEventListener('input', function() {
+  if (errorEl.textContent) errorEl.textContent = '';
+});
+
+document.getElementById('submit').addEventListener('click', function() {
+  submitAnswer();
+});
+
+function finish() {
+  clearInterval(timerInterval);
+  var elapsed = (Date.now() - startTime) / 1000;
+  quizEl.style.display = 'none';
+  resultsEl.style.display = 'block';
+  document.getElementById('res-time').textContent = formatTime(elapsed) + 's';
+  document.getElementById('res-correct').textContent = correctCount + '/' + problems.length;
+  document.getElementById('res-avg').textContent = formatTime(elapsed / problems.length) + 's';
+  var wrap = document.getElementById('mistakes-wrap');
+  var mistakesEl = document.getElementById('mistakes');
+  mistakesEl.innerHTML = '';
+  if (mistakes.length > 0) {
+    wrap.style.display = 'block';
+    mistakes.forEach(function(m) {
+      var span = document.createElement('span');
+      span.className = 'mistake-pill';
+      span.textContent = m;
+      mistakesEl.appendChild(span);
+    });
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+document.getElementById('retry-btn').addEventListener('click', function() {
+  resultsEl.style.display = 'none';
+  setupEl.style.display = 'block';
+});
+</script>
+
+</body>
+</html>
