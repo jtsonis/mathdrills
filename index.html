@@ -245,8 +245,14 @@ function genProblems(n, maxf) {
         diff = maxVal - minVal;
       }
 
+      var zz = Math.floor(Math.random() * (5 - 1)) + 2;
+      var zy = Math.floor(Math.random() * (5 - 1)) + 2;
+      var z = Math.min(zz, zy);
+      
       var factors = [];
-      var temp = diff;
+      a = a * z;
+      b = b * z
+      var temp = diff * z;
 
       for (var f = 2; f * f <= temp; f++) {
         if (temp % f === 0) {
@@ -259,7 +265,7 @@ function genProblems(n, maxf) {
       if (temp > 1) {
         factors.push(temp);
       }
-
+      
       var c = factors[Math.floor(Math.random() * factors.length)];
       var ans = (maxVal - minVal) / c;
 
