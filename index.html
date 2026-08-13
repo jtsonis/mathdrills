@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Multiplication Speed Drill</title>
+<title>Addition Speed Drill</title>
 <style>
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -16,6 +16,10 @@
   h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
   label { font-size: 14px; color: #555; }
   input[type="range"] { width: 100%; }
+  input[type="range"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
   input[type="number"] {
     width: 140px;
     text-align: center;
@@ -42,6 +46,12 @@
     border: none;
   }
   #submit:hover { background: #1d4ed8; }
+  #quit-btn {
+    margin-top: 8px;
+    background: #fff;
+    color: #666;
+  }
+  #quit-btn:hover { background: #f3f4f6; color: #111; }
   .row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .row label { min-width: 110px; }
   .center { text-align: center; }
@@ -61,11 +71,37 @@
     padding: 4px 10px;
     border-radius: 6px;
   }
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 24px;
+  }
+  .mode-btn {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    color: #9ca3af;
+    transition: all 0.2s ease;
+  }
+  .mode-btn:hover {
+    border-color: #d1d5db;
+    color: #6b7280;
+  }
+  .mode-btn.active {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #eff6ff;
+  }
 </style>
 </head>
 <body>
 
-<h1>Multiplication Speed Drill</h1>
+<h1 id="title">Addition Speed Drill</h1>
 
 <div id="setup">
   <div class="row">
@@ -78,6 +114,29 @@
     <input type="range" min="5" max="12" step="1" value="10" id="maxf" />
     <span id="maxf-out">10</span>
   </div>
+  
+  <div class="mode-selector">
+    <button class="mode-btn active" id="mode-add" aria-label="Addition">
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+    <button class="mode-btn" id="mode-mult" aria-label="Multiplication">
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <button class="mode-btn" id="mode-para" aria-label="Parabola">
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <line x1="2" y1="16" x2="22" y2="16"></line>
+        <path d="M4 4 Q12 24 20 4"></path>
+      </svg>
+    </button>
+  </div>
+
   <button id="start-btn">Start drill</button>
 </div>
 
@@ -94,6 +153,7 @@
   </div>
   <p id="input-error" class="error"></p>
   <button id="submit">Submit</button>
+  <button id="quit-btn">Quit drill</button>
 </div>
 
 <div id="results" style="display:none;">
@@ -110,8 +170,37 @@
 </div>
 
 <script>
-var countSlider = document.getElementById('count');
+var currentMode = 'add'; // 'add' 'mult' 'para'
+
+var titles = {
+  'add': 'Addition Speed Drill',
+  'mult': 'Multiplication Speed Drill',
+  'para': 'Algebra Speed Drill'
+};
+
+var titleEl = document.getElementById('title');
+var modeBtns = document.querySelectorAll('.mode-btn');
 var maxfSlider = document.getElementById('maxf');
+
+modeBtns.forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    modeBtns.forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    
+    if (this.id === 'mode-add') currentMode = 'add';
+    else if (this.id === 'mode-mult') currentMode = 'mult';
+    else if (this.id === 'mode-para') currentMode = 'para';
+    
+    // Disable or enable the Max Factor slider based on mode
+    maxfSlider.disabled = (currentMode === 'para');
+
+    var newTitle = titles[currentMode];
+    document.title = newTitle;
+    if (titleEl) titleEl.textContent = newTitle;
+  });
+});
+
+var countSlider = document.getElementById('count');
 var countOut = document.getElementById('count-out');
 var maxfOut = document.getElementById('maxf-out');
 countSlider.addEventListener('input', function() { countOut.textContent = countSlider.value; });
@@ -138,14 +227,57 @@ function genProblems(n, maxf) {
   for (var i = 0; i < n; i++) {
     var a = Math.floor(Math.random() * (maxf - 1)) + 2;
     var b = Math.floor(Math.random() * (maxf - 1)) + 2;
-    list.push({ a: a, b: b, answer: a * b });
+
+    if (currentMode === 'add') {
+      list.push({ a: a, b: b, display: a + ' + ' + b, answer: a + b });
+    } else if (currentMode === 'mult') {
+      list.push({ a: a, b: b, display: a + ' × ' + b, answer: a * b });
+    } else {
+      var minVal = Math.min(a, b);
+      var maxVal = Math.max(a, b);
+      var diff = maxVal - minVal;
+
+      while (diff <= 1) {
+        a = Math.floor(Math.random() * (maxf - 1)) + 2;
+        b = Math.floor(Math.random() * (maxf - 1)) + 2;
+        minVal = Math.min(a, b);
+        maxVal = Math.max(a, b);
+        diff = maxVal - minVal;
+      }
+
+      var factors = [];
+      var temp = diff;
+
+      for (var f = 2; f * f <= temp; f++) {
+        if (temp % f === 0) {
+          factors.push(f);
+          while (temp % f === 0) {
+            temp /= f;
+          }
+        }
+      }
+      if (temp > 1) {
+        factors.push(temp);
+      }
+
+      var c = factors[Math.floor(Math.random() * factors.length)];
+      var ans = (maxVal - minVal) / c;
+
+      list.push({
+        a: minVal,
+        b: maxVal,
+        c: c,
+        display: c + 'x + ' + minVal + ' = ' + maxVal,
+        answer: ans
+      });
+    }
   }
   return list;
 }
 
 function showProblem() {
   var p = problems[idx];
-  problemEl.textContent = p.a + ' × ' + p.b;
+  problemEl.textContent = p.display; 
   progressEl.textContent = (idx + 1) + ' / ' + problems.length;
   answerEl.value = '';
   errorEl.textContent = '';
@@ -192,7 +324,13 @@ function submitAnswer() {
   if (val === p.answer) {
     correctCount++;
   } else {
-    mistakes.push(p.a + '×' + p.b + '=' + p.answer);
+    if (currentMode === 'mult') {
+      mistakes.push(p.a + ' × ' + p.b + ' = ' + p.answer);
+    } else if (currentMode === 'add') {
+      mistakes.push(p.a + ' + ' + p.b + ' = ' + p.answer);
+    } else {
+      mistakes.push(p.display + ' (x=' + p.answer + ')');
+    }
   }
   idx++;
   if (idx >= problems.length) {
@@ -215,6 +353,12 @@ answerEl.addEventListener('input', function() {
 
 document.getElementById('submit').addEventListener('click', function() {
   submitAnswer();
+});
+
+document.getElementById('quit-btn').addEventListener('click', function() {
+  clearInterval(timerInterval);
+  quizEl.style.display = 'none';
+  setupEl.style.display = 'block';
 });
 
 function finish() {
